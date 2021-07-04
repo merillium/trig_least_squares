@@ -65,16 +65,6 @@ def generate_extrapolation_plot(x_plot, y_plot, x_train, y_train, x_range: list,
 	## create figure
 	fig = go.Figure()
 
-	## plot the data with markers
-	fig.add_trace(go.Scatter(
-		x=x_plot,
-		y=y_plot,
-		mode='markers',
-		marker=dict(color='darkviolet'),
-		name='data points'
-		)
-	)
-
 	## plot the line of best fit using a grid
 	fig.add_trace(go.Scatter(
 		x=x_grid,
@@ -82,6 +72,16 @@ def generate_extrapolation_plot(x_plot, y_plot, x_train, y_train, x_range: list,
 		mode='lines',
 		line=dict(color='salmon'),
 		name='fitted function'
+		)
+	)
+
+	## plot the data with markers
+	fig.add_trace(go.Scatter(
+		x=x_plot,
+		y=y_plot,
+		mode='markers',
+		marker=dict(color='darkviolet'),
+		name='data points'
 		)
 	)
 
