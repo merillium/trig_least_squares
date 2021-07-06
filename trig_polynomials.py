@@ -3,21 +3,6 @@ from numpy import sin, cos, tan, sinc, prod
 import pandas as pd
 import plotly.graph_objects as go
 
-## for testing purposes:
-## unevenly spaced odd number of points
-# x = [-2,-1,0,2,5]; y = [-1,0,0,1,5]
-
-# df = pd.read_csv("https://raw.githubusercontent.com/jbrownlee/Datasets/master/daily-min-temperatures.csv")
-# df["Date"] = pd.to_datetime(df["Date"])
-# df["Days_passed"] = (df["Date"] - df["Date"][0]).dt.days
-
-# x_plot = df.Days_passed.values.tolist()
-# y_plot = df.Temp.values.tolist()
-
-# idx_vals = [22, 167, 409, 565]
-# x_train = [x_plot[idx] for idx in idx_vals]
-# y_train = [y_plot[idx] for idx in idx_vals]
-
 def get_odd_polynomial(x_vals, y_vals):
     """return a function that can be evaluated at x for an odd number of points"""
     N = len(x_vals)

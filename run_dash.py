@@ -8,7 +8,7 @@ from threading import Timer
 import plotly.graph_objects as go
 from trig_polynomials import get_odd_polynomial, get_even_polynomial
 
-def generate_extrapolation_fig(x_plot, y_plot, x_train, y_train, x_range: list, num_points=500):
+def generate_extrapolation_fig(x_plot: list, y_plot: list, x_train: list, y_train: list, x_range: list, num_points=500) -> go.Figure:
     ## x_plot and y_plot are the data points that you are plotting
     ## x_train and y_train are a subset of x_plot and y_plot used to generate the trig polynomial
     ## x_min, x_max is used to generate the grid that is passed to the trig polynomial to plot the fitted function
@@ -45,7 +45,7 @@ def generate_extrapolation_fig(x_plot, y_plot, x_train, y_train, x_range: list, 
         name='data points'
         )
     )
-
+    fig.update_layout(margin=dict(l=0))
     return fig
 
 def create_dash_app(fig=go.Figure()):
@@ -54,21 +54,23 @@ def create_dash_app(fig=go.Figure()):
         dcc.Graph(figure=fig, id='trig-polynomial-fig'),
         dcc.Textarea(
             id='xvalues-string',
-            value='1,2,3',
-            style={'width': '10%', 'height': 50},
+            value="",
+            placeholder='Enter x-values separated by commas',
+            style={'width': '15%', 'height': 50},
             draggable=False
         ),
         dcc.Textarea(
             id='yvalues-string',
-            value='1,2,3',
-            style={'width': '10%', 'height': 50},
+            placeholder="Enter y-values separated by commas",
+            value="",
+            style={'width': '15%', 'height': 50},
             draggable=False
         ),
         html.Br(),
         html.Button('Generate extrapolation plot', id='generate-plot', n_clicks=0, style={'whiteSpace': 'pre-wrap'}),
         html.Br(),
         html.Div(id='error-output', style={'whiteSpace': 'pre-line', 'color': 'red'})
-    ])
+    ],id="outer")
 
     @app.callback(
         Output('trig-polynomial-fig', 'figure'),
@@ -78,22 +80,25 @@ def create_dash_app(fig=go.Figure()):
          State('yvalues-string', 'value')]
     )
     def update_graph(n_clicks, xvalues_string, yvalues_string):
+        ## keep the default text when the app first loads
+        if n_clicks == 0:
+            return go.Figure(dict(layout=dict(margin=dict(l=0)))), ""
         try:
             xvalues_list = [float(val) for val in xvalues_string.split(',')]
         except ValueError as e:
             error_message = "Error: invalid x-value input!"
-            return go.Figure(), error_message
+            return go.Figure(dict(layout=dict(margin=dict(l=0)))), error_message
         try:
             yvalues_list = [float(val) for val in yvalues_string.split(',')]
         except ValueError as e:
             error_message = "Error: invalid y-value input!"
-            return go.Figure(), error_message
+            return go.Figure(dict(layout=dict(margin=dict(l=0)))), error_message
         if len(xvalues_list) != len(yvalues_list):
             error_message = "Error: there must be an equal number of x- and y-values!"
-            return go.Figure(), error_message
+            return go.Figure(dict(layout=dict(margin=dict(l=0)))), error_message
         elif len(xvalues_list) != len(set(xvalues_list)):
             error_message = "Error: cannot fit a polynomial to duplicate x-values"
-            return go.Figure(), error_message
+            return go.Figure(dict(layout=dict(margin=dict(l=0)))), error_message
         else:
             x_range = [min(xvalues_list)-5, max(xvalues_list)+5]
             fig = generate_extrapolation_fig(xvalues_list, yvalues_list, xvalues_list, yvalues_list, x_range)

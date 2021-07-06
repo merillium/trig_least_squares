@@ -1,0 +1,8 @@
+textarea {
+    resize: none;
+}
+
+#outer {
+    padding-left: 20px;
+    padding-right: 20px;
+}
