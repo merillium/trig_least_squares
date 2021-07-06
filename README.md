@@ -1,7 +1,13 @@
 ##### This repo is currently a work in progress.
 
-##### We use the [generalized solution](https://en.wikipedia.org/wiki/Trigonometric_interpolation#Solution_of_the_problem) to the trigonometric interpolation problem to create a trigonometric polynomial. The specific polynomial is calculated from (x,y) coordinates passed to the `generate_extrapolation_plot function`, and the function is drawn over a range of x-values, with the interpolation points superimposed over the function.
+##### We use the [generalized solution](https://en.wikipedia.org/wiki/Trigonometric_interpolation#Solution_of_the_problem) to the trigonometric interpolation problem to create a trigonometric polynomial that interpolates (and extrapolates) from x- and y-values. These coordinates are provided by the user through the text boxes in the Dash Plotly framework. There is also error handling for invalid inputs.
+
+##### Nice to have features: 
+* uploading two-column data 
+* ability to specify how many of the points to interpolate
+* extrapolation of points not on the chart (e.g. evaluate f(10))
+* specify the range of the function to display
+* display the interpolating trigonometric polynomial itself in summation & pi notation
 
 ##### Example below:
 ##### ![sample plot](https://github.com/merillium/trig_interpolation/blob/master/images/sample_dash_app.gif)
-
