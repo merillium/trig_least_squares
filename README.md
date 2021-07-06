@@ -1,6 +1,6 @@
 ##### This repo is currently a work in progress.
 
-##### We use the [generalized solution](https://en.wikipedia.org/wiki/Trigonometric_interpolation#Solution_of_the_problem) to the trigonometric interpolation problem to create a trigonometric polynomial that interpolates (and extrapolates) from x- and y-values. These coordinates are provided by the user through the text boxes in the Dash Plotly framework. There is also error handling for invalid inputs.
+##### We use the [generalized solution](https://en.wikipedia.org/wiki/Trigonometric_interpolation#Solution_of_the_problem) to the trigonometric interpolation problem to create a trigonometric polynomial that interpolates (and extrapolates) from x- and y-values - which are provided by the user through the text boxes in the Dash Plotly framework. There is also error handling for invalid inputs.
 
 ##### Nice to have features: 
 * ###### uploading two-column data
