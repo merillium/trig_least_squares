@@ -103,7 +103,7 @@ def create_dash_app(fig=go.Figure()):
             return go.Figure(dict(layout=dict(title=dict(text="-",font=dict(color='white'))), margin=dict(l=0))), error_message
         elif len(xvalues_list) != len(set(xvalues_list)):
             error_message = "Error: cannot fit a polynomial to duplicate x-values"
-            return go.Figure(dict(layout=dict(title=dict(text="-",font=dict(color='white'), margin=dict(l=0))))), error_message
+            return go.Figure(dict(layout=dict(title=dict(text="-",font=dict(color='white'))), margin=dict(l=0))), error_message
         else:
             x_range = [min(xvalues_list)-5, max(xvalues_list)+5]
             fig = generate_extrapolation_fig(xvalues_list, yvalues_list, xvalues_list, yvalues_list, x_range)
