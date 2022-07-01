@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import sin, cos, tan, sinc, prod
+from numpy.linalg import inv, lstsq
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -52,3 +53,29 @@ class TrigPolynomial:
         + f"\displaystyle\prod_{{m=0,\:m≠k}}^{{\\text{{{2*K-1}}}" + "} " + r"\frac{{\sin\frac{{1}}{{2}}(x-x_m)}}{{\sin\frac{{1}}{{2}}(x_k-x_m)}} ,\ " \
         + r"\alpha_k=" + f"\displaystyle\sum_{{m=0\:m≠k}}^{{\\text{{{2*K-1}}}" + "} " + r"{{x_m}}-2\varphi_k ,\ \varphi_k = 0.6$"
         self.polynomial_function = eval_even_polynomial
+    
+    ## this solves the least squares problem using trigonometric basis functions
+    ## and generates a function that can be evaluated at x
+    def trig_basis_functions(self, x, n):
+        basis_functions = [1]
+        for k in range(1,n+1):
+            basis_functions.extend([cos(k*x),sin(k*x)])
+        return basis_functions
+    
+    def generate_lstsq_coefficients(self, x_vals, y_vals, n):
+        ## we find the least squares solution to ATAx = ATb where b is the y_vals
+        A = np.array([self.trig_basis_functions(x,n) for x in x_vals])
+    
+        ## default behavior: smallest possible values chosen for free variables (e.g. 0)
+        coefs = lstsq(A,y_vals,rcond=None)[0]
+        return coefs
+        
+    ## return a function that can be evaluated at x
+    ## the coefficients should already be calculated ahead of time
+    ## to ensure that we aren't re-calculating the coefficients which only depend on x_vals, y_vals, n
+    def get_degree_n_polynomial(self, coefs, n):
+        ## dot product of: 
+        # (1) the array generated from plugging x into basis function
+        # (2) the coefficients generated from the solution to the least squares problem
+        self.polynomial_function = lambda x: np.dot(coefs, self.trig_basis_functions(x,n))
+    
