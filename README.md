@@ -4,7 +4,7 @@
 
 ##### Current features:
 - [x] uploading csvs with the option to select columns corresponding to x- and y- variables
-- [x] 
+- [x] error handling for invalid csvs or data
 
 ##### Features in progress: 
 - [ ] ability to select the index of the dataframe (convenient for timeseries data)
