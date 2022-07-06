@@ -6,12 +6,25 @@ from numpy.lib import polynomial
 import dash
 from dash import dcc, html, Input, Output, ctx, State
 import plotly.graph_objects as go
-from trig_polynomials import TrigPolynomial
 
-def generate_extrapolation_fig(x_plot: list, y_plot: list, x_train: list, y_train: list, x_range: list, n: float, num_points=500) -> go.Figure:
+from trig_polynomials import TrigPolynomial
+from years import from_date_to_year_fraction, from_year_fraction_to_date
+
+def generate_extrapolation_fig(
+        x_plot: list, 
+        y_plot: list, 
+        x_train: list, 
+        y_train: list, 
+        x_range: list, 
+        n: float, 
+        num_points=1000,
+        time_series=False
+    ) -> go.Figure:
     ## x_plot and y_plot are the data points that you are plotting
     ## x_train and y_train are a subset of x_plot and y_plot used to generate the trig polynomial
     ## x_min, x_max is used to generate the grid that is passed to the trig polynomial to plot the fitted function
+    ## even if x_plot, x_train are meant to be timestamps, they should be passed to this function as floats
+
     x_min, x_max = x_range
     x_grid = np.linspace(x_min, x_max, num_points)
 
@@ -19,11 +32,12 @@ def generate_extrapolation_fig(x_plot: list, y_plot: list, x_train: list, y_trai
     ## it contains the interpolation function and also a string representation of the polynomial
     trig_polynomial = TrigPolynomial()
 
-    ## creates a perfect interpolation function (degree = inf):
+    ## this constructs a trigonometric polynomial that interpolates all points perfectly
+    ## the behavior of such interpolating functions are too sensitive to have practical applications
     if n == float("inf"):
-        trig_polynomial.get_polynomial(x_train,y_train)
+        trig_polynomial.get_polynomial(x_train, y_train)
     
-    ## creates a trig polynomial of degree n
+    ## creates a trig polynomial of degree n that fits the data
     else:
         n = int(n)
         coefs = trig_polynomial.generate_lstsq_coefficients(x_train, y_train, int(n))
@@ -37,6 +51,13 @@ def generate_extrapolation_fig(x_plot: list, y_plot: list, x_train: list, y_trai
     fig = go.Figure()
 
     ## plot the trigonometric polynomial interpolation using a grid
+    ## if time_series, then cast the x_grid and x_plot as timestamps
+    if time_series:
+        x_grid = [from_year_fraction_to_date(t) for t in x_grid]
+        x_plot = [from_year_fraction_to_date(t) for t in x_plot]
+        print(x_grid[:10])
+        print(x_plot[:10])
+
     fig.add_trace(go.Scatter(
         x=x_grid,
         y=y_grid,
@@ -75,6 +96,7 @@ def create_dash_app(fig=go.Figure()):
                 'Drag and Drop or ',
                 html.A('Select a csv file')
             ]),
+            max_size=10**6,
             style={
                 'width': '30%',
                 'height': '60px',
@@ -87,6 +109,13 @@ def create_dash_app(fig=go.Figure()):
         ),
         html.Br(),
         html.Div(id='error-data-upload', style={'whiteSpace': 'pre-line', 'color': 'red'}),
+        html.Br(),
+        dcc.Checklist(
+            ['time series'],
+            [],
+            id='is-timeseries',
+        ),
+        html.Br(),
         html.Div(
             dcc.Dropdown(
                 id='x-column-dropdown',
@@ -131,31 +160,13 @@ def create_dash_app(fig=go.Figure()):
             ),
             style={"width": "15%"}
         ),
-        # html.Div(
-        #     [dcc.Dropdown(
-        #         id='polynomial-degree',
-        #         options=[val for val in range(1,11)],
-        #         value=1,
-        #         searchable=False,
-        #         placeholder='Select a polynomial degree'
-        #     ),
-        #     dcc.Dropdown(
-        #         id='polynomial-degree-2',
-        #         options=[val for val in range(1,11)],
-        #         value=1,
-        #         searchable=False,
-        #         placeholder='Select a polynomial degree'
-        #     )],
-        #     style={"width": "15%"}
-        # ),
         html.Br(),
         html.Button('Generate extrapolation plot', id='generate-plot', n_clicks=0, style={'whiteSpace': 'pre-wrap'}),
         html.Br(),
         html.Div(id='error-output', style={'whiteSpace': 'pre-line', 'color': 'red'})
     ],id="outer")
 
-    ## the first callback processes the input and stores the dataframe
-    ## have a callback with two distinct triggers (upload data, generate plot run different functions)
+    ## this callback processes the input and stores the dataframe
     @app.callback(
         Output('csv-data', 'data'),
         Output('x-column-dropdown', 'options'),
@@ -166,6 +177,7 @@ def create_dash_app(fig=go.Figure()):
         prevent_initial_call=True
     )
     def parse_csv_and_fill_dropdowns(contents, filename):
+        max_rows = 20000
         if not filename.endswith('.csv'):
             error_message = "Error: you must upload a .csv file"
             return None, [], [], error_message
@@ -174,17 +186,20 @@ def create_dash_app(fig=go.Figure()):
                 content_type, content_string = contents.split(',')
                 decoded = base64.b64decode(content_string)
                 df_input = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-                all_cols = df_input.columns
-                dropdown_options = [{'label': col, 'value': col} for col in all_cols]
-                return df_input.to_json(orient='split'), dropdown_options, dropdown_options, "Data successfully parsed!"
-                
+                if len(df_input) > max_rows:
+                    error_message = f"The csv file exceeds the maximum allowable limit of {max_rows} rows"
+                    return None, [], [], error_message
+                else:
+                    all_cols = df_input.columns
+                    dropdown_options = [{'label': col, 'value': col} for col in all_cols]
+                    return df_input.to_json(orient='split'), dropdown_options, dropdown_options, "Data successfully parsed!"
+                    
             except Exception as e:
                 error_message = "Error: your csv file could not be processed"
                 return None, [], [], error_message
 
             
-    ## the second callback retreives the dataframe from being stored
-    ## and uses the selected x- and y- columns to populate the textboxes
+    ## this callback uses the selected x- and y- columns of the stored dataframe to populate the textboxes
     @app.callback(
         Output('xvalues-string', 'value'),
         Output('yvalues-string', 'value'),
@@ -215,16 +230,17 @@ def create_dash_app(fig=go.Figure()):
             y_values = ",".join(df_input[y_col].tolist())
             return x_values, y_values
 
-    ## third callback processes the x-values and y-values textboxes 
+    ## this callback processes the x-values and y-values textboxes and creates the figure
     @app.callback(
         Output('trig-polynomial-fig', 'figure'),
         Output('error-output', 'children'),
         Input('generate-plot', 'n_clicks'),
         [State('polynomial-degree', 'value'),
+         State('is-timeseries', 'value'),
          State('xvalues-string', 'value'),
          State('yvalues-string', 'value')]
     )
-    def update_graph(n_clicks, polynomial_degree, xvalues_string, yvalues_string):
+    def update_graph(n_clicks, polynomial_degree, is_timeseries, xvalues_string, yvalues_string):
         ## return figure, rendered polynomial latex string, and empty error message
         ## keep the default text when the app first loads
         ## when there is any type of error, remove the equations (by resetting the title text and changing the color to white)
@@ -239,7 +255,18 @@ def create_dash_app(fig=go.Figure()):
         
         ## ensure numbers have been entered for x and y values
         try:
-            xvalues_list = [float(val) for val in xvalues_string.split(',')]
+            print(is_timeseries)
+            ## convert string of timestamps to epoch in ns (since 1970-01-01)
+            if len(is_timeseries) == 0:
+                print("not timeseries")
+                time_series = False
+                xvalues_list = [float(val) for val in xvalues_string.split(',')]
+            else:
+                print("is timeseries")
+                time_series = True
+                xvalues_list = [from_date_to_year_fraction(d) for d in xvalues_string.split(',')]
+                print(xvalues_list[:10])
+                
         except ValueError as e:
             error_message = "Error: invalid x-value input!"
             return go.Figure(dict(layout=dict(title=dict(text="-",font=dict(color='white'))), margin=dict(l=0))), error_message
@@ -251,11 +278,13 @@ def create_dash_app(fig=go.Figure()):
         if len(xvalues_list) != len(yvalues_list):
             error_message = "Error: there must be an equal number of x- and y-values!"
             return go.Figure(dict(layout=dict(title=dict(text="-",font=dict(color='white'))), margin=dict(l=0))), error_message
+        
+        ## float("inf") is no longer an option so this condition never occurs
         elif (len(xvalues_list) != len(set(xvalues_list))) & (float(polynomial_degree) == float("inf")):
             error_message = "Error: cannot fit a polynomial to duplicate x-values"
             return go.Figure(dict(layout=dict(title=dict(text="-",font=dict(color='white'))), margin=dict(l=0))), error_message
         else:
-            x_range_padding = (max(xvalues_list) - min(xvalues_list)) / 16
+            x_range_padding = (max(xvalues_list) - min(xvalues_list)) / 2
             x_range = [min(xvalues_list)-x_range_padding, max(xvalues_list)+x_range_padding]
             fig = generate_extrapolation_fig(
                 x_plot=xvalues_list, 
@@ -263,7 +292,8 @@ def create_dash_app(fig=go.Figure()):
                 x_train=xvalues_list, 
                 y_train=yvalues_list, 
                 x_range=x_range, 
-                n=float(polynomial_degree)
+                n=float(polynomial_degree),
+                time_series=time_series
             )
             return fig, ""
 
@@ -272,4 +302,4 @@ def create_dash_app(fig=go.Figure()):
 ## set debug=False when deploying live
 if __name__ == '__main__':
     app = create_dash_app()
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    app.run_server(debug=True, host="0.0.0.0", port=8080)
