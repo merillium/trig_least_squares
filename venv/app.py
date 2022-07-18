@@ -159,11 +159,11 @@ def create_dash_app(fig=go.Figure()):
             style={"width": "15%"}
         ),
         html.Br(),
-        dcc.Slider(
-            0, 100, 5,
-            value=1,
-            id='test'
-        ),
+        # dcc.Slider(
+        #     0, 100, 5,
+        #     value=1,
+        #     id='test'
+        # ),
         html.Br(),
         html.Button('Generate extrapolation plot', id='generate-plot', n_clicks=0, style={'whiteSpace': 'pre-wrap'}),
         html.Br(),
