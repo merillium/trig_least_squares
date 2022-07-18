@@ -46,17 +46,15 @@ def generate_extrapolation_fig(
     y_grid = [trig_polynomial.polynomial_function(x_grid_val) for x_grid_val in x_grid]
     polynomial_equation = trig_polynomial.polynomial_string
     polynomial_coefficents = trig_polynomial.coefficient_string
-    
+
     ## create figure
     fig = go.Figure()
 
-    ## plot the trigonometric polynomial interpolation using a grid
+    ## plot the trigonometric polynomial best fit function using a grid
     ## if time_series, then cast the x_grid and x_plot as timestamps
     if time_series:
         x_grid = [from_year_fraction_to_date(t) for t in x_grid]
         x_plot = [from_year_fraction_to_date(t) for t in x_plot]
-        print(x_grid[:10])
-        print(x_plot[:10])
 
     fig.add_trace(go.Scatter(
         x=x_grid,
@@ -79,7 +77,7 @@ def generate_extrapolation_fig(
 
     ## this workaround using MathJax allows LaTeX style equations to be displayed
     ## source: https://github.com/plotly/dash/issues/242
-    fig.update_layout(title=polynomial_equation + polynomial_coefficents, margin=dict(l=0))
+    fig.update_layout(title=polynomial_coefficents + polynomial_equation, margin=dict(l=0), font=dict(size=12))
     return fig
 
 def create_dash_app(fig=go.Figure()):
@@ -89,7 +87,7 @@ def create_dash_app(fig=go.Figure()):
     ])
 
     app.layout = html.Div([
-        dcc.Graph(figure=fig, id='trig-polynomial-fig'),
+        dcc.Graph(figure=fig, id='trig-polynomial-fig', mathjax=True),
         dcc.Upload(
             id='upload-data',
             children=html.Div([
@@ -160,6 +158,12 @@ def create_dash_app(fig=go.Figure()):
             ),
             style={"width": "15%"}
         ),
+        html.Br(),
+        # dcc.Slider(
+        #     0, 100, 5,
+        #     value=1,
+        #     id='test'
+        # ),
         html.Br(),
         html.Button('Generate extrapolation plot', id='generate-plot', n_clicks=0, style={'whiteSpace': 'pre-wrap'}),
         html.Br(),
@@ -255,17 +259,13 @@ def create_dash_app(fig=go.Figure()):
         
         ## ensure numbers have been entered for x and y values
         try:
-            print(is_timeseries)
             ## convert string of timestamps to epoch in ns (since 1970-01-01)
             if len(is_timeseries) == 0:
-                print("not timeseries")
                 time_series = False
                 xvalues_list = [float(val) for val in xvalues_string.split(',')]
             else:
-                print("is timeseries")
                 time_series = True
                 xvalues_list = [from_date_to_year_fraction(d) for d in xvalues_string.split(',')]
-                print(xvalues_list[:10])
                 
         except ValueError as e:
             error_message = "Error: invalid x-value input!"

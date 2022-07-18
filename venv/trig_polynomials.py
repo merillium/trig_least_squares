@@ -11,6 +11,7 @@ class TrigPolynomial:
         self.coefficient_string = ""
         self.polynomial_function = None
     
+    ## these polynomial functions for exact interpolation are archived
     def get_polynomial(self, x_vals, y_vals):
         if len(x_vals) % 2 == 1:
             self.get_odd_polynomial(x_vals, y_vals)
@@ -58,8 +59,23 @@ class TrigPolynomial:
     ## and generates a function that can be evaluated at x
     def trig_basis_functions(self, x, n):
         basis_functions = [1]
+
+        ## starting bracket for the basis of trig polynomials
+        self.polynomial_string = "\\begin{bmatrix}1 & "
         for k in range(1,n+1):
             basis_functions.extend([cos(k*x),sin(k*x)])
+            if k == 1:
+                if k == n:
+                    self.polynomial_string += f"\cos x & \sin x"
+                else:
+                    self.polynomial_string += f"\cos x & \sin x & "
+            elif k == n:
+                self.polynomial_string += f"\cos {k}x & \sin {k}x"
+            else:
+                self.polynomial_string += f"\cos {k}x & \sin {k}x &"
+        
+        ## ending bracket \] for the entire coefficient string + polynomial string
+        self.polynomial_string += "\end{bmatrix}^T$$"
         return basis_functions
     
     def generate_lstsq_coefficients(self, x_vals, y_vals, n):
@@ -78,4 +94,6 @@ class TrigPolynomial:
         # (1) the array generated from plugging x into basis function
         # (2) the coefficients generated from the solution to the least squares problem
         self.polynomial_function = lambda x: np.dot(coefs, self.trig_basis_functions(x,n))
-    
+
+        ## use MathJax notation to construct nicely rendered coefficient matrix array
+        self.coefficient_string = "$$\\begin{bmatrix}" + " & ".join(["{:.2f}".format(coef) for coef in coefs]) + " \end{bmatrix} "
