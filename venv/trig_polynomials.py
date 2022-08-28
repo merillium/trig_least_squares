@@ -1,8 +1,10 @@
+import copy
+
 import numpy as np
-from numpy import sin, cos, tan, sinc, prod
-from numpy.linalg import inv, lstsq
 import pandas as pd
 import plotly.graph_objects as go
+from numpy import cos, prod, sin, sinc, tan
+from numpy.linalg import inv, lstsq
 
 
 class TrigPolynomial:
@@ -10,90 +12,75 @@ class TrigPolynomial:
         self.polynomial_string = ""
         self.coefficient_string = ""
         self.polynomial_function = None
-    
-    ## these polynomial functions for exact interpolation are archived
-    def get_polynomial(self, x_vals, y_vals):
-        if len(x_vals) % 2 == 1:
-            self.get_odd_polynomial(x_vals, y_vals)
-        if len(x_vals) % 2 == 0:
-            self.get_even_polynomial(x_vals, y_vals)
-    
-    def get_odd_polynomial(self, x_vals, y_vals):
-        """return a function that can be evaluated at x for an odd number of points"""
-        N = len(x_vals)
-        K = int((N - 1)/2)
-        def t_k(x, x_vals, k):
-            return prod([sin((1/2)*(x-x_vals[m])) / sin((1/2)*(x_vals[k]-x_vals[m])) for m in range(int(2*K + 1)) if m != k])
 
-        def eval_odd_polynomial(x):
-            return sum([prod([y_vals[k], t_k(x, x_vals, k)]) for k in range(int(2*K + 1))])
-
-        self.polynomial_string = f"$\displaystyle\sum_{{k=1}}^{{\\text{{{2*K}}}" + "} " +  f"{{y_k}}{{t_k}}(x) ,\ "
-        self.coefficient_string = f"t_k(x)=\displaystyle\prod_{{m=0,\:m≠k}}^{{\\text{{{2*K}}}" + "} " +  r"\frac{{\sin\frac{{1}}{{2}}(x-x_m)}}{{\sin\frac{{1}}{{2}}(x_k-x_m)}}$"
-        self.polynomial_function = eval_odd_polynomial
-
-    def get_even_polynomial(self, x_vals, y_vals):
-        """return a function that can be evaluated at x for an even number of points"""
-        N = len(x_vals)
-        K = int(N/2)
-        def a_k(x_vals, k, epsilon=0.6):
-            ## WLOG we choose some epsilon such that sin((1/2)*epsilon) ≠ 0, where epsilon = 2*phi 
-            ## based on the derivation of the solution to the even polynomial here: https://en.wikipedia.org/wiki/Trigonometric_interpolation#Even_number_of_points
-            return x_vals[k] - epsilon
-
-        def t_k(x, x_vals, k):
-            first_term = sin((1/2)*(x - a_k(x_vals, k))) / sin((1/2)*(x_vals[k] - a_k(x_vals, k)))
-            second_term = prod([sin((1/2)*(x-x_vals[m])) / sin((1/2)*(x_vals[k]-x_vals[m])) for m in range(int(2*K - 1 + 1)) if m != k])
-            return first_term*second_term
-
-        def eval_even_polynomial(x):
-            return sum([prod([y_vals[k], t_k(x, x_vals, k)]) for k in range(int(2*K - 1 + 1))])
-        
-        self.polynomial_string = f"$\displaystyle\sum_{{k=1}}^{{\\text{{{2*K - 1}}}" + "} " +  f"{{y_k}}{{t_k}}(x) ,\ "
-        self.coefficient_string = f"t_k(x)= " + r"\displaystyle\frac{{\sin\frac{{1}}{{2}}(x-\alpha_k)}}{{\sin\frac{{1}}{{2}}(x_k-\alpha_k)}}" \
-        + f"\displaystyle\prod_{{m=0,\:m≠k}}^{{\\text{{{2*K-1}}}" + "} " + r"\frac{{\sin\frac{{1}}{{2}}(x-x_m)}}{{\sin\frac{{1}}{{2}}(x_k-x_m)}} ,\ " \
-        + r"\alpha_k=" + f"\displaystyle\sum_{{m=0\:m≠k}}^{{\\text{{{2*K-1}}}" + "} " + r"{{x_m}}-2\varphi_k ,\ \varphi_k = 0.6$"
-        self.polynomial_function = eval_even_polynomial
-    
     ## this solves the least squares problem using trigonometric basis functions
     ## and generates a function that can be evaluated at x
-    def trig_basis_functions(self, x, n):
-        basis_functions = [1]
+    def trig_basis_functions(self, b1, b2, x):
+        return [1, cos(b1 * x), sin(b2 * x)]
 
-        ## starting bracket for the basis of trig polynomials
-        self.polynomial_string = "\\begin{bmatrix}1 & "
-        for k in range(1,n+1):
-            basis_functions.extend([cos(k*x),sin(k*x)])
-            if k == 1:
-                if k == n:
-                    self.polynomial_string += f"\cos x & \sin x"
-                else:
-                    self.polynomial_string += f"\cos x & \sin x & "
-            elif k == n:
-                self.polynomial_string += f"\cos {k}x & \sin {k}x"
-            else:
-                self.polynomial_string += f"\cos {k}x & \sin {k}x &"
-        
-        ## ending bracket \] for the entire coefficient string + polynomial string
-        self.polynomial_string += "\end{bmatrix}^T$$"
-        return basis_functions
-    
-    def generate_lstsq_coefficients(self, x_vals, y_vals, n):
+    def generate_lstsq_coefficients(self, x_vals, y_vals, b1, b2):
         ## we find the least squares solution to ATAx = ATb where b is the y_vals
-        A = np.array([self.trig_basis_functions(x,n) for x in x_vals])
-    
+        A = np.array([self.trig_basis_functions(b1, b2, x) for x in x_vals])
+
         ## default behavior: smallest possible values chosen for free variables (e.g. 0)
-        coefs = lstsq(A,y_vals,rcond=None)[0]
+        coefs = lstsq(A, y_vals, rcond=None)[0]
         return coefs
-        
-    ## return a function that can be evaluated at x
-    ## the coefficients should already be calculated ahead of time
-    ## to ensure that we aren't re-calculating the coefficients which only depend on x_vals, y_vals, n
-    def get_degree_n_polynomial(self, coefs, n):
-        ## dot product of: 
+
+    ## sets the polynomial_function attribute as a lambda function that can be evaluated at x
+    def set_trig_polynomial(self, coefs, b1, b2):
+        ## dot product of:
         # (1) the array generated from plugging x into basis function
         # (2) the coefficients generated from the solution to the least squares problem
-        self.polynomial_function = lambda x: np.dot(coefs, self.trig_basis_functions(x,n))
+        self.polynomial_function = lambda x: np.dot(
+            coefs, self.trig_basis_functions(b1, b2, x)
+        )
+        
+    def calculate_error(self, x_vals, y_vals):
+        y_preds = [self.polynomial_function(x) for x in x_vals]
+        error = np.sum(np.abs([y2 - y1 for y2, y1 in zip(y_vals, y_preds)]))
+        return error
 
-        ## use MathJax notation to construct nicely rendered coefficient matrix array
-        self.coefficient_string = "$$\\begin{bmatrix}" + " & ".join(["{:.2f}".format(coef) for coef in coefs]) + " \end{bmatrix} "
+    def grid_search_polynomial_coefficients(
+        self, x_vals, y_vals, b_min=0, b_max=2, grid_size=20
+    ):
+
+        ## optimize the best b1,b2 values for the polynomial to minimize error
+        test_trig_polynomial = copy.deepcopy(self)
+
+        ## initialize the error to None
+        error = None
+        for b1 in np.linspace(b_min, b_max, grid_size):
+            for b2 in np.linspace(b_min, b_max, grid_size):
+
+                ## generate coefs for the new iteration of the loop
+                coefs = self.generate_lstsq_coefficients(x_vals, y_vals, b1, b2)
+
+                ## this sets the polynomial and base level of error on the first iteration of the loop
+                if error is None:
+                    self.set_trig_polynomial(coefs, b1, b2)
+                    test_trig_polynomial.set_trig_polynomial(coefs, b1, b2)
+                    error = test_trig_polynomial.calculate_error(x_vals, y_vals)
+                else:
+                    test_trig_polynomial.set_trig_polynomial(coefs, b1, b2)
+                    new_error = test_trig_polynomial.calculate_error(x_vals, y_vals)
+                    if new_error < error:
+                        error = new_error
+                        b1_optimal, b2_optimal = b1, b2
+                        print(
+                            f"current optimal parameters: b1={b1_optimal} and b2={b2_optimal}"
+                        )
+                        coefs_optimal = coefs
+
+        ## the optimal trig polynomial can be set outside of the grid search
+        self.set_trig_polynomial(coefs_optimal, b1_optimal, b2_optimal)
+
+        self.coefficient_string = (
+            "$$\hat{y}(x) = \\begin{bmatrix} "
+            + " & ".join(["{:.2f}".format(coef) for coef in coefs])
+            + " \end{bmatrix} "
+        )
+        self.polynomial_string = (
+            "\\begin{bmatrix} 1 & "
+            + f"\cos {b1_optimal:.2f}x & \sin {b2_optimal:.2f}x"
+            + " \end{bmatrix}^T$$"
+        )
