@@ -14,6 +14,9 @@ from numpy.lib import polynomial
 from trig_polynomials import TrigPolynomial
 from years import from_date_to_year_fraction, from_year_fraction_to_date
 
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 def generate_extrapolation_fig(
     x_plot: list,
@@ -35,7 +38,7 @@ def generate_extrapolation_fig(
     x_grid = np.linspace(x_min, x_max, num_points)
 
     ## instantiate an object of the TrigPolynomial class
-    ## it contains the interpolation function and also a string representation of the polynomial
+    ## it contains the interpolation function and polynomial metadata
     trig_polynomial = TrigPolynomial()
     error = None
 
@@ -44,6 +47,7 @@ def generate_extrapolation_fig(
     y_grid = [trig_polynomial.polynomial_function(x_grid_val) for x_grid_val in x_grid]
     polynomial_equation = trig_polynomial.polynomial_string
     polynomial_coefficents = trig_polynomial.coefficient_string
+    r2 = trig_polynomial.r2_string
 
     ## create figure
     fig = go.Figure()
@@ -54,9 +58,9 @@ def generate_extrapolation_fig(
     if time_series:
         x_grid = [from_year_fraction_to_date(t) for t in x_grid]
         x_plot = [from_year_fraction_to_date(t) for t in x_plot]
-        title = re.sub(r"(?<=[\d\(])x", "t", polynomial_coefficents + polynomial_equation)
+        title = re.sub(r"(?<=[\d\(])x", "t", polynomial_coefficents + polynomial_equation + r2)
     else:
-        title = polynomial_coefficents + polynomial_equation
+        title = polynomial_coefficents + polynomial_equation + r2
 
     ## plot the data with markers
     fig.add_trace(
@@ -86,7 +90,7 @@ def generate_extrapolation_fig(
 def create_dash_app(fig=go.Figure(dict(layout=dict(margin=dict(l=0))))):
     app = dash.Dash(
         __name__,
-        suppress_callback_exceptions=True,
+        # suppress_callback_exceptions=True,
         external_scripts=[
             "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML",
         ],
@@ -239,9 +243,7 @@ def create_dash_app(fig=go.Figure(dict(layout=dict(margin=dict(l=0))))):
     )
     def parse_csv_and_fill_dropdowns(contents, stocks_nclicks, filename):
         max_rows = 20000
-        print(ctx.triggered_id)
         if ctx.triggered_id == "load-stocks":
-            print("loading stocks dataset")
             df_stocks = pd.read_csv("./tests/stocks.csv")
 
             return (
@@ -397,4 +399,4 @@ def create_dash_app(fig=go.Figure(dict(layout=dict(margin=dict(l=0))))):
 ## set debug=False when deploying live
 if __name__ == "__main__":
     app = create_dash_app()
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    app.run_server(debug=True, host="0.0.0.0", port=8080)

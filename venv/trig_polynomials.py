@@ -11,6 +11,7 @@ class TrigPolynomial:
     def __init__(self):
         self.polynomial_string = ""
         self.coefficient_string = ""
+        self.r2_string = ""
         self.polynomial_function = None
 
     ## this solves the least squares problem using trigonometric basis functions
@@ -22,7 +23,7 @@ class TrigPolynomial:
         ## we find the least squares solution to ATAx = ATb where b is the y_vals
         A = np.array([self.trig_basis_functions(b1, b2, x) for x in x_vals])
 
-        ## default behavior: smallest possible values chosen for free variables (e.g. 0)
+        ## choose the smallest possible values for free variables (e.g. 0)
         coefs = lstsq(A, y_vals, rcond=None)[0]
         return coefs
 
@@ -35,13 +36,22 @@ class TrigPolynomial:
             coefs, self.trig_basis_functions(b1, b2, x)
         )
         
+    ## a function to calculate error and help optimize the grid search
     def calculate_error(self, x_vals, y_vals):
         y_preds = [self.polynomial_function(x) for x in x_vals]
         error = np.sum(np.abs([y2 - y1 for y2, y1 in zip(y_vals, y_preds)]))
         return error
+    
+    def calculate_rsquared(self, x_vals, y_vals):
+        y_preds = [self.polynomial_function(x) for x in x_vals]
+        sum_squared_regression = np.sum(np.abs([(y2 - y1)**2 for y2, y1 in zip(y_vals, y_preds)]))
+        total_sum_of_squares = np.linalg.norm(np.array(y_preds) - np.mean(y_vals), 2)
+        print(f"sum_squared_regression={sum_squared_regression}")
+        print(f"total_sum_of_squares={total_sum_of_squares}")
+        return 1 - (sum_squared_regression / total_sum_of_squares)
 
     def grid_search_polynomial_coefficients(
-        self, x_vals, y_vals, b_min=0, b_max=2, grid_size=20
+        self, x_vals, y_vals, b_min, b_max, grid_size=20
     ):
 
         ## optimize the best b1,b2 values for the polynomial to minimize error
@@ -66,9 +76,9 @@ class TrigPolynomial:
                     if new_error < error:
                         error = new_error
                         b1_optimal, b2_optimal = b1, b2
-                        print(
-                            f"current optimal parameters: b1={b1_optimal} and b2={b2_optimal}"
-                        )
+                        # print(
+                        #     f"current optimal parameters: b1={b1_optimal} and b2={b2_optimal}"
+                        # )
                         coefs_optimal = coefs
 
         ## the optimal trig polynomial can be set outside of the grid search
@@ -82,5 +92,9 @@ class TrigPolynomial:
         self.polynomial_string = (
             "\\begin{bmatrix} 1 & "
             + f"\cos {b1_optimal:.2f}x & \sin {b2_optimal:.2f}x"
-            + " \end{bmatrix}^T$$"
+            + " \end{bmatrix}^T"
         )
+        self.r2_string = (
+            f", r^2 = {self.calculate_rsquared(x_vals, y_vals):.2f}$$"
+        )
+
