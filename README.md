@@ -5,6 +5,7 @@
 ##### You can navigate into the venv directory with `cd venv`, then load the requirements and launch the app with the following commands:
 
 `pip install -r requirements.txt`
+
 `python app.py`
 
 ##### Current features:
