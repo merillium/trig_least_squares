@@ -2,7 +2,7 @@
 
 We solve the least squares problem using trigonometric polynomials with non-integer degree. The basis functions are [1, sin(ax), cos(bx)] where a,b can take on any value. There is also error handling for invalid inputs.
 
-You can navigate into the venv directory with `cd venv`, then load the requirements and launch the app with the following commands:
+If you want to launch the Dash app locally, you can navigate into the venv directory with `cd venv`, then run the following commands:
 
 `pip install -r requirements.txt`
 
